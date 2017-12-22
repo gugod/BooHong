@@ -14,12 +14,10 @@ subtest "A simple mocking request." => sub {
     my $URI_PATH = "/whatever/" . int(rand(64));
 
     my $response;
-    note "In the beginning there is nothing";
 
     $response = HTTP::Tiny->new->get($TEST_SERVER . $URI_PATH);
-    is $response->{status}, "501";
+    is $response->{status}, "501", "In the beginning it does not know how to bôo‑hóng.";
 
-    note "After mutating";
     my $body_randomness = rand();
     my $body = qq<{"message":"hello","rand":"${body_randomness}"}>;
     $response = HTTP::Tiny->new->post(
@@ -40,12 +38,27 @@ subtest "A simple mocking request." => sub {
             })
         }
     );
-
-    note "It responds with the response we ask it to";
+    is $response->{status}, 200, "Mutation success.";
 
     $response = HTTP::Tiny->new->get($TEST_SERVER . $URI_PATH);
-    is $response->{status}, "200";
-    is $response->{content}, $body;
+    is $response->{status}, "200", "The response status looks about right";
+    is $response->{content}, $body, "The response body looks about right";
+
+    $response = HTTP::Tiny->new->delete(
+        $TEST_SERVER . "/Y^_^Y/",
+        {
+            content => encode_json({
+                request => {
+                    method => "GET",
+                    path => $URI_PATH,
+                },
+            }),
+        }
+    );
+    is $response->{status}, 200, "Now, un-learn how to bôo‑hóng";
+
+    $response = HTTP::Tiny->new->get($TEST_SERVER . $URI_PATH);
+    is $response->{status}, "501", "Indeed, it does not know how do $URI_PATH anymore";
 };
 
 done_testing;

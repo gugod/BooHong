@@ -7,13 +7,16 @@ use Plack::Request;
 use Plack::Response;
 use JSON::PP qw<encode_json decode_json>;
 
+# pick a sensible URI path for myself and it must not be used by my bosses.
 use constant COMEDIAN => "/Y^_^Y/";
 
 sub process {
     my ($self, $req) = @_;
 
     my $path = $req->path_info;
-    my $what = $self->{registry}{by_path}{$path};
+    my $method = $req->method;
+
+    my $what = $self->{registry}{$method}{$path};
     return undef unless $what;
 
     return $req->new_response(
@@ -24,13 +27,17 @@ sub process {
 }
 
 sub register {
-    my ($self, $content) = @_;
-    my $what = decode_json($content);
-    $self->{registry}{by_path}{$what->{request}{path}} = $what;
+    my ($self, $what) = @_;
+    $self->{registry}{$what->{request}{method}}{$what->{request}{path}} = $what;
 }
 
+sub unregister {
+    my ($self, $what) = @_;
+    delete $self->{registry}{$what->{request}{method}}{$what->{request}{path}};
+}
 
 my $app = sub {
+    # So... since the registry lives in this object, this app can only run as a single process. No forking. :)
     state $self = bless { registry => {} } => __PACKAGE__;
 
     my $env = shift;
@@ -38,9 +45,14 @@ my $app = sub {
     my $res;
 
     if ($req->path_info eq COMEDIAN) {
+        my $what = decode_json($req->content);
         if ($req->method eq 'POST') {
-            $self->register($req->content);
+            $self->register($what);
         }
+        elsif ($req->method eq 'DELETE') {
+            $self->unregister($what);
+        }
+        $res = $req->new_response(200, {}, '{}');
     } else {
         $res = $self->process($req);
     }
@@ -88,6 +100,22 @@ Effect: After this request, this request will start to produce response:
     Set-Cookies: foo=bar
     
     {"message":"nihao"}
+
+=item DELETE /Y^_^Y/
+
+Delete one mock described in the body.
+
+Example of request body:
+
+    {
+        "request": {
+            "method": "GET",
+            "path": "/dir1/dir2/dir3"
+        }
+    }
+
+This request is idempotent and always return successfully even if the
+described is never registered.
 
 =back
 
