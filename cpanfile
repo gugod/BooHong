@@ -1,3 +1,4 @@
 
 requires 'Plack';
-requires 'Test2';
+
+test_requires 'Test2';
