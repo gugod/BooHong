@@ -36,6 +36,15 @@ sub unregister {
     delete $self->{registry}{$what->{request}{method}}{$what->{request}{path}};
 }
 
+sub list_registry {
+    my ($self, $req) = @_;
+    return $req->new_response(
+        200,
+        {},
+        encode_json($self->{registry}),
+    );
+}
+
 my $app = sub {
     # So... since the registry lives in this object, this app can only run as a single process. No forking. :)
     state $self = bless { registry => {} } => __PACKAGE__;
@@ -45,14 +54,17 @@ my $app = sub {
     my $res;
 
     if ($req->path_info eq COMEDIAN) {
-        my $what = decode_json($req->content);
-        if ($req->method eq 'POST') {
-            $self->register($what);
+        if ($req->method eq 'GET') {
+            $res = $self->list_registry($req);
+        } else {
+            my $what = decode_json($req->content // '{}');
+            if ($req->method eq 'POST') {
+                $self->register($what);
+            } elsif ($req->method eq 'DELETE') {
+                $self->unregister($what);
+            }
         }
-        elsif ($req->method eq 'DELETE') {
-            $self->unregister($what);
-        }
-        $res = $req->new_response(200, {}, '{}');
+        $res //= $req->new_response(200, {}, '{}');
     } else {
         $res = $self->process($req);
     }
