@@ -23,13 +23,6 @@ sub boohong_it {
 
     my $req = Plack::Request->new($env);
 
-    my $body = $status_headers_body->[2];
-    if (is_arrayref($body)) {
-        $body = join "", @$body;
-    } elsif (is_coderef($body)) {
-        $body = $body->();
-    }
-
     my $what = {
         request => {
             method => $req->method,
@@ -40,19 +33,18 @@ sub boohong_it {
         response => {
             status => $status_headers_body->[0],
             headers => $status_headers_body->[1],
-            body => $body,
+            body =>  $status_headers_body->[2],
         },
     };
 
     my $furl_request = Furl::Request->new(
-        $req->method,
+        'POST',
         BOOHONG_SERVER . "/Y^_^Y/",
         [],
         encode_json($what),
     );
     my $furl = Furl->new;
     my $boohong_res = $furl->request($furl_request);
-
     return;
 }
 
@@ -63,6 +55,7 @@ builder {
         sub {
             my $env = shift;
             $env->{'plack.proxy.url'} = BOOHONG_TARGET . $env->{REQUEST_URI};
+            print STDERR "DEBUG: Target URL $env->{'plack.proxy.url'}\n";
             my $content = "";
             return Plack::Util::response_cb(
                 $proxy_app->($env),
