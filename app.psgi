@@ -70,10 +70,11 @@ sub unregister {
 
 sub list_registry {
     my ($self, $req) = @_;
+    my $json = JSON::PP->new->ascii;
     return $req->new_response(
         200,
         [],
-        encode_json($self->{registry}),
+        $json->encode($self->{registry}),
     );
 }
 
