@@ -34,8 +34,8 @@ sub boohong_it {
         request => {
             method => $req->method,
             path => $req->request_uri,
-            # headers => ...
-            # body => ...
+            headers => $req->headers->psgi_flatten,
+            body => $req->content,
         },
         response => {
             status => $status_headers_body->[0],

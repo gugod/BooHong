@@ -3,6 +3,7 @@ use v5.18;
 use strict;
 use warnings;
 
+use Digest::MD5 qw(md5_base64);
 use Plack::Request;
 use Plack::Response;
 use JSON::PP qw<encode_json decode_json>;
@@ -16,7 +17,14 @@ sub process {
     my $path = $req->path_info;
     my $method = $req->method;
 
-    my $what = $self->{registry}{$method}{$path};
+    my $sig = request_digest({
+        method => $req->method,
+        path => $req->request_uri,
+        headers => $req->headers->psgi_flatten,
+        body => $req->content,
+    });
+
+    my $what = $self->{registry}{$sig};
     return undef unless $what;
 
     return $req->new_response(
@@ -26,14 +34,38 @@ sub process {
     );
 }
 
+use constant IS_CONTENT_UNRELATED_HEADER => { map { (lc($_), 1) } qw(Accept-Encoding Server Date Connection Host Content-Length User-Agent) };
+
+sub request_digest {
+    my ($o) = @_;
+    state $json = JSON::PP->new->canonical->ascii;
+    my @headers;
+
+    for (my $i = 0; $i < @{$o->{headers}}; $i += 2) {
+        my $k = $o->{headers}[$i];
+        next if IS_CONTENT_UNRELATED_HEADER->{ lc($k) };
+        push @headers, $k, $o->{headers}[$i+1];
+    }
+
+    my $txt = $json->encode({
+        headers => \@headers,
+        method => $o->{method},
+        path => $o->{path},
+        # body => $o->{body},
+    });
+    return md5_base64($txt);
+}
+
 sub register {
     my ($self, $what) = @_;
-    $self->{registry}{$what->{request}{method}}{$what->{request}{path}} = $what;
+    my $sig = request_digest($what->{request});
+    $self->{registry}{$sig} = $what;
 }
 
 sub unregister {
     my ($self, $what) = @_;
-    delete $self->{registry}{$what->{request}{method}}{$what->{request}{path}};
+    my $sig = request_digest($what->{request});
+    delete $self->{registry}{$sig};
 }
 
 sub list_registry {
