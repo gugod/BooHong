@@ -57,14 +57,14 @@ my $app = sub {
         if ($req->method eq 'GET') {
             $res = $self->list_registry($req);
         } else {
-            my $what = decode_json($req->content // '{}');
+            my $what = decode_json($req->content);
             if ($req->method eq 'POST') {
                 $self->register($what);
             } elsif ($req->method eq 'DELETE') {
                 $self->unregister($what);
             }
         }
-        $res //= $req->new_response(200, {}, '{}');
+        $res //= $req->new_response(200, [], '{}');
     } else {
         $res = $self->process($req);
     }
@@ -92,7 +92,7 @@ Example of request body:
         "response": {
             "status": 200,
             "headers": [
-                "Set-Cookies": "foo=bar"
+                "Set-Cookies", "foo=bar"
             ],
             "body": "{\"message\":\"nihao\"}"
         }

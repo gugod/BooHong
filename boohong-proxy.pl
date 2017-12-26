@@ -3,8 +3,6 @@ use v5.18;
 use strict;
 use warnings;
 
-use Data::Dumper;
-
 use Furl;
 use Furl::Request;
 
@@ -24,7 +22,6 @@ sub boohong_it {
     my ($env, $status_headers_body) = @_;
 
     my $req = Plack::Request->new($env);
-    my $res = Plack::Response->new($status_headers_body);
 
     my $body = $status_headers_body->[2];
     if (is_arrayref($body)) {
@@ -49,9 +46,9 @@ sub boohong_it {
 
     my $furl_request = Furl::Request->new(
         $req->method,
-        BOOHONG_SERVER . $req->request_uri,
-        $req->headers->psgi_flatten,
-        $req->body,
+        BOOHONG_SERVER . "/Y^_^Y/",
+        [],
+        encode_json($what),
     );
     my $furl = Furl->new;
     my $boohong_res = $furl->request($furl_request);
@@ -59,22 +56,30 @@ sub boohong_it {
     return;
 }
 
+
 builder {
     enable sub {
         my $proxy_app = shift;
         sub {
             my $env = shift;
             $env->{'plack.proxy.url'} = BOOHONG_TARGET . $env->{REQUEST_URI};
-            my $proxy_res = $proxy_app->($env);
+            my $content = "";
             return Plack::Util::response_cb(
-                $proxy_res,
+                $proxy_app->($env),
                 sub {
-                    my $status_headers_body = $_[0];
-                    boohong_it($env, $status_headers_body);
-                    return;
+                    my $res = shift;
+                    return sub {
+                        my ($chunk) = @_;
+                        if (defined($chunk)) {
+                            $content .= $chunk;
+                        } else {
+                            $res->[2] = $content;
+                            boohong_it($env, $res);
+                        }
+                    }
                 }
             );
         }
     };
-    Plack::App::Proxy->new()->to_app;
+    Plack::App::Proxy->new(backend => "LWP")->to_app;
 };
