@@ -72,7 +72,7 @@ sub list_registry {
     my ($self, $req) = @_;
     return $req->new_response(
         200,
-        {},
+        [],
         encode_json($self->{registry}),
     );
 }
