@@ -34,7 +34,7 @@ sub process {
     );
 }
 
-use constant IS_CONTENT_UNRELATED_HEADER => { map { (lc($_), 1) } qw(Accept-Encoding Server Date Connection Host Content-Length User-Agent) };
+use constant IS_CONTENT_UNRELATED_HEADER => { map { (lc($_), 1) } qw(Accept-Encoding Server Date Connection Host Content-Length User-Agent X-Forwarded-For X-Trident-Gateway) };
 
 sub request_digest {
     my ($o) = @_;
