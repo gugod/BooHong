@@ -42,8 +42,8 @@ sub request_digest {
     my @headers;
 
     for (my $i = 0; $i < @{$o->{headers}}; $i += 2) {
-        my $k = $o->{headers}[$i];
-        next if IS_CONTENT_UNRELATED_HEADER->{ lc($k) };
+        my $k = lc( $o->{headers}[$i] );
+        next if IS_CONTENT_UNRELATED_HEADER->{ $k };
         push @headers, $k, $o->{headers}[$i+1];
     }
 
